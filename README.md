@@ -7,9 +7,10 @@ This thing is using [Faster Whisper](https://github.com/SYSTRAN/faster-whisper) 
 Intended functionality is, that once the container is started, it watches the input folder and transcribes audio files that appear there.
 All completed audio files will be moved to the output folder. And every transcribtion will be documented in an SQLite Database.
 
-It is expected that the audiofiles have the name structure 'YYYYMMDD_HHMMss<Channel ID>_DMR_Digital_01__02__TO_X_FROM_<Speaker ID>.mp3' example '20260317_183128CATS_DMR_Digital_01__02__TO_1_FROM_67420.mp3'.
+It is expected that the audiofiles have the name structure `YYYYMMDD_HHMMss<Channel ID>_DMR_Digital_01__02__TO_X_FROM_<Speaker ID>.mp3` 
+Example: `20260317_183128CATS_DMR_Digital_01__02__TO_1_FROM_67420.mp3`.
 
-The SQLite Database consits of an 'transcriptions' table:
+The SQLite Database consits of an `transcriptions` table:
 example:
 
 |id|filename|date|time|speaker|channel|text|
