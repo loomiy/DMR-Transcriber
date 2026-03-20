@@ -42,7 +42,7 @@ def process_existing_files(input_folder, model, output_folder=None):
         print(f"Processing existing file: {filepath}")
         process_audio_file(filepath, model, output_folder=output_folder)
 
-def process_audio_file(filepath: str, model, db_path="transcriptions.db", output_folder=None):
+def process_audio_file(filepath: str, model, db_file="transcriptions.db", output_folder=None):
     """
     Processes a single audio file:
         - Parses the filename
@@ -53,7 +53,7 @@ def process_audio_file(filepath: str, model, db_path="transcriptions.db", output
 
     :param filepath: Path to the audio file
     :param model: Initialized Whisper model
-    :param db_path: Path to SQLite DB file (default: "transcriptions.db")
+    :param db_file: SQLite File Name (default: "transcriptions.db")
     :param output_folder: Optional folder to move the file after processing
     """
     filename = os.path.basename(filepath)
@@ -65,7 +65,7 @@ def process_audio_file(filepath: str, model, db_path="transcriptions.db", output
     transcription = transcribe_audio(model, filepath)
 
     # Write to DB (Thread-safe)
-    conn = sqlite3.connect(db_path)
+    conn = sqlite3.connect("/app/db/" + db_file)
     cursor = conn.cursor()
 
     # Expected that Table exists
@@ -74,11 +74,8 @@ def process_audio_file(filepath: str, model, db_path="transcriptions.db", output
     conn.commit()
     conn.close()
 
-
     # Print Infos
-
     print_file_info(file_info, transcription)
-
 
     # Move File
     if output_folder:
@@ -263,9 +260,6 @@ def parse_filename(filename: str) -> dict:
 
     return data
 
-
-
-
 if __name__ == "__main__":
 
     # Load environment variables
@@ -276,33 +270,30 @@ if __name__ == "__main__":
     # Input / Output / DB Paths
     INPUT_FOLDER = os.getenv("INPUT_FOLDER", "input")
     OUTPUT_FOLDER = os.getenv("OUTPUT_FOLDER", "output")
-    DB_PATH = os.getenv("DB_PATH", "transcriptions.db")
+    DB_FILE = os.getenv("DB_FILE", "transcriptions.db")
 
     # Whisper Config
     MODEL_SIZE = os.getenv("MODEL_SIZE", "medium")
     DEVICE = os.getenv("DEVICE", "cuda")
     COMPUTE_TYPE = os.getenv("COMPUTE_TYPE", "float16")
 
-    # Debug / Logging
-    DEBUG = os.getenv("DEBUG", "True").lower() in ("true", "1", "yes")
+    # Huggingface Token
+    HF_TOKEN =  os.getenv("HF_TOKEN", None)
 
-    if DEBUG:
-        print("Environment variables loaded:")
-        print(f"INPUT_FOLDER={INPUT_FOLDER}")
-        print(f"OUTPUT_FOLDER={OUTPUT_FOLDER}")
-        print(f"DB_PATH={DB_PATH}")
-        print(f"MODEL_SIZE={MODEL_SIZE}")
-        print(f"DEVICE={DEVICE}")
-        print(f"COMPUTE_TYPE={COMPUTE_TYPE}")
+    print("Environment variables loaded:")
+    print(f"INPUT_FOLDER={INPUT_FOLDER}")
+    print(f"OUTPUT_FOLDER={OUTPUT_FOLDER}")
+    print(f"DB_FILE={DB_FILE}")
+    print(f"MODEL_SIZE={MODEL_SIZE}")
+    print(f"DEVICE={DEVICE}")
+    print(f"COMPUTE_TYPE={COMPUTE_TYPE}")
 
 
-    # Load Model
-    model = WhisperModel(MODEL_SIZE, device=DEVICE, compute_type=COMPUTE_TYPE)
 
     # Create SQLite Table if it doesn't exist
 
-
-    conn = sqlite3.connect("transcriptions.db")
+    print("Building Database:.....")
+    conn = sqlite3.connect("/app/db/" + DB_FILE)
     cursor = conn.cursor()
 
     cursor.execute("""
@@ -318,6 +309,11 @@ if __name__ == "__main__":
     """)
 
     conn.commit()
+
+
+    # Load Model
+    print("Loading Whisper:")
+    model = WhisperModel(MODEL_SIZE, device=DEVICE, compute_type=COMPUTE_TYPE)
 
     # Main Loop thingy
     start_watchdog_with_existing(
