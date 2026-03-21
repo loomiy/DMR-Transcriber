@@ -150,11 +150,15 @@ def transcribe_audio(model, filepath: str) -> dict:
     combined = ""
 
     try:
-        audio = whisperx.load_audio(filepath)
-        result = model.transcribe(audio, batch_size=BATCH_SIZE)
+        # WhisperX expects NULL for Automatic Language Detection
+        language = None if LANGUAGE == "auto" else LANGUAGE
 
-        model_a, metadata = whisperx.load_align_model(language_code=result["language"], device=device)
-        aligned = whisperx.align(result["segments"], model_a, metadata, audio, device, return_char_alignments=False)
+        audio = whisperx.load_audio(filepath)
+        
+        result = model.transcribe(audio, batch_size=BATCH_SIZE, language=language)
+
+        model_a, metadata = whisperx.load_align_model(language_code=result["language"], device=DEVICE)
+        aligned = whisperx.align(result["segments"], model_a, metadata, audio, DEVICE, return_char_alignments=False)
         combined = " ".join(segment["text"] for segment in aligned["segments"])
 
     except Exception as e:
@@ -262,11 +266,17 @@ if __name__ == "__main__":
 
     DB_FILE = os.getenv("DB_FILE", "transcriptions.db")
 
+
     # Whisper Config
     MODEL_SIZE = os.getenv("MODEL_SIZE", "medium")
     DEVICE = os.getenv("DEVICE", "cuda")
     COMPUTE_TYPE = os.getenv("COMPUTE_TYPE", "float16")
-    BATCH_SIZE = os.getenv("BATCH_SIZE", "16")
+    LANGUAGE = os.getenv("LANGUAGE", "auto")
+    
+    try:
+        BATCH_SIZE = int(os.getenv("BATCH_SIZE", 16))
+    except ValueError:
+        BATCH_SIZE = 16
 
     # Huggingface Token (optional)
     HF_TOKEN =  os.getenv("HF_TOKEN", None)
