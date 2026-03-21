@@ -2,7 +2,7 @@
 
 Super WIP atm... and so far i only got CPU stuff working in the Docker container.
 
-This thing is using [Faster Whisper](https://github.com/SYSTRAN/faster-whisper) to transcribe DMR Audiologs. 
+This thing is using [WhisperX](https://github.com/m-bain/whisperX) to transcribe DMR Audiologs. 
 
 Intended functionality is, that once the container is started, it watches the input folder and transcribes audio files that appear there.
 All completed audio files will be moved to the output folder. And every transcribtion will be documented in an SQLite Database.
