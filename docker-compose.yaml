@@ -1,6 +1,6 @@
 services:
   dmr:
-    image: docker pull ghcr.io/loomiy/dmr-transcriber:latest
+    image: ghcr.io/loomiy/dmr-transcriber:latest
     env_file: .env
     volumes:
       - ./input:/app/input
