@@ -142,6 +142,10 @@ def insert_transcription(cursor, filename: str, file_info: dict, transcription: 
 def transcribe_audio(model, filepath: str) -> dict:
     """
     Function to transcribe a single Audio File
+    
+    :param model: Initialized faster whisper model
+    :param filepath: Path to Audio File
+    :return: string with transcribed text
     """
     combined = ""
 
@@ -232,10 +236,10 @@ def parse_filename(filename: str) -> dict:
     # Remove TO_X
     channel = re.sub(r"_?TO_\d+", "", channel_info)
 
-    # "__" → " "
+    # "__" > " "
     channel = channel.replace("__", " ")
 
-    # "_" → " "
+    # "_" > " "
     channel = channel.replace("_", " ")
 
     # Remove multiple Spaces
@@ -247,21 +251,14 @@ def parse_filename(filename: str) -> dict:
 
 if __name__ == "__main__":
 
-    # Input Output Folder Paths
+    # Internal Folder Paths
     INPUT_FOLDER = "input"
     OUTPUT_FOLDER = "output"
     DB_FOLDER = "db/"
     MODEL_FOLDER = "models"
 
-    # Load environment variables
-
     # Load .env File 
     load_dotenv()
-
-    # Input / Output / DB Paths
-
-    BATCH_SIZE = os.getenv("BATCH_SIZE", "16")
-
 
     DB_FILE = os.getenv("DB_FILE", "transcriptions.db")
 
@@ -269,11 +266,12 @@ if __name__ == "__main__":
     MODEL_SIZE = os.getenv("MODEL_SIZE", "medium")
     DEVICE = os.getenv("DEVICE", "cuda")
     COMPUTE_TYPE = os.getenv("COMPUTE_TYPE", "float16")
+    BATCH_SIZE = os.getenv("BATCH_SIZE", "16")
 
-    # Huggingface Token
+    # Huggingface Token (optional)
     HF_TOKEN =  os.getenv("HF_TOKEN", None)
 
-
+    # Create Folders if they don't exist
     Path(INPUT_FOLDER).mkdir(parents=True, exist_ok=True)
     Path(OUTPUT_FOLDER).mkdir(parents=True, exist_ok=True)
     Path(DB_FOLDER).mkdir(parents=True, exist_ok=True)
@@ -288,10 +286,8 @@ if __name__ == "__main__":
     print(f"COMPUTE_TYPE={COMPUTE_TYPE}")
 
 
-
     # Create SQLite Table if it doesn't exist
-
-    print("Building Database:.....")
+    print("Building Database:")
     print(DB_FOLDER + DB_FILE)
     conn = sqlite3.connect(DB_FOLDER + DB_FILE)
     cursor = conn.cursor()
@@ -310,24 +306,12 @@ if __name__ == "__main__":
 
     conn.commit()
 
-
     # Load Model
-    print("Loading Whisper:")
-    #model = WhisperModel(MODEL_SIZE, device=DEVICE, compute_type=COMPUTE_TYPE)
+    print("Loading WhisperX:")
 
+    model = whisperx.load_model("large-v2", DEVICE, compute_type=COMPUTE_TYPE, download_root=MODEL_FOLDER)
 
-    device = "cuda"
-    batch_size = 16 # reduce if low on GPU mem
-    compute_type = "float16" # change to "int8" if low on GPU mem (may reduce accuracy)
-
-    # 1. Transcribe with original whisper (batched)
-    model = whisperx.load_model("large-v2", device, compute_type=compute_type, download_root=MODEL_FOLDER)
-
-
-
-
-
-    # Main Loop thingy
+    # Watchdog loop
     start_watchdog_with_existing(
         input_folder=INPUT_FOLDER,
         output_folder=OUTPUT_FOLDER,
