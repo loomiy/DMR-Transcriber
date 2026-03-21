@@ -96,6 +96,7 @@ class AudioHandler(FileSystemEventHandler):
         if not event.src_path.lower().endswith((".mp3", ".wav", ".m4a")):
             return
         print(f"New audio file detected: {event.src_path}")
+        time.sleep(5)
         process_audio_file(event.src_path, self.model, output_folder=self.output_folder)
 
 def print_file_info(file_info: dict, transcription: dict):
