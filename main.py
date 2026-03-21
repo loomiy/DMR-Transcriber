@@ -262,14 +262,18 @@ def parse_filename(filename: str) -> dict:
 
 if __name__ == "__main__":
 
+    # Input Output Folder Paths
+    INPUT_FOLDER = "input"
+    OUTPUT_FOLDER = "output"
+
     # Load environment variables
 
     # Load .env File 
     load_dotenv()
 
     # Input / Output / DB Paths
-    INPUT_FOLDER = os.getenv("INPUT_FOLDER", "input")
-    OUTPUT_FOLDER = os.getenv("OUTPUT_FOLDER", "output")
+
+
     DB_FILE = os.getenv("DB_FILE", "transcriptions.db")
 
     # Whisper Config
