@@ -6,4 +6,4 @@ services:
       - ./input:/app/input
       - ./output:/app/output
       - ./db:/app/db
-      - ./cache:/root/.cache/huggingface
+      - ./models:/app/models
