@@ -33,3 +33,12 @@ Now you can stop the whole thing with `docker compose down` and see the logs wit
 
 # Building
 `docker build . -t dmr-transcriber:latest`
+
+# Developement
+
+For local testing
+```bash
+python3.13 -m venv .venv
+source .venv/bin/activate
+pip install -r rquirements.txt
+```

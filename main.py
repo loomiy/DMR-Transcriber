@@ -1,5 +1,6 @@
 import os
-from faster_whisper import WhisperModel
+import whisperx
+import gc
 import re
 from datetime import datetime
 from dotenv import load_dotenv
@@ -8,6 +9,7 @@ import shutil
 import time
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
+from pathlib import Path
 
 def start_watchdog_with_existing(input_folder="input", output_folder="output", model=None):
     """
@@ -65,7 +67,7 @@ def process_audio_file(filepath: str, model, db_file="transcriptions.db", output
     transcription = transcribe_audio(model, filepath)
 
     # Write to DB (Thread-safe)
-    conn = sqlite3.connect("/app/db/" + db_file)
+    conn = sqlite3.connect(DB_FOLDER + db_file)
     cursor = conn.cursor()
 
     # Expected that Table exists
@@ -99,12 +101,12 @@ class AudioHandler(FileSystemEventHandler):
         time.sleep(5)
         process_audio_file(event.src_path, self.model, output_folder=self.output_folder)
 
-def print_file_info(file_info: dict, transcription: dict):
+def print_file_info(file_info: dict, transcription: str):
     """
     Prints structured file info and transcription summary.
 
     :param file_info: Dictionary with parsed filename info
-    :param transcription: Dictionary with transcription data
+    :param transcription: String with Transcribed Audio
     """
     print("\n==============================")
     print(f"Filename: {file_info['raw']}")
@@ -112,18 +114,17 @@ def print_file_info(file_info: dict, transcription: dict):
     print(f"Time: {file_info['time']}")
     print(f"Speaker: {file_info['speaker']}")
     print(f"Channel: {file_info['channel']}")
-    print(f"Language: {transcription['language']} ({transcription['language_probability']:.2f})")
     print("Transcription:")
-    print(transcription['text'])
+    print(transcription)
 
-def insert_transcription(cursor, filename: str, file_info: dict, transcription: dict):
+def insert_transcription(cursor, filename: str, file_info: dict, transcription: str):
     """
     Inserts a transcription entry into the SQLite database.
 
     :param cursor: SQLite cursor object
     :param filename: Name of the audio file
     :param file_info: Dictionary with parsed filename info
-    :param transcription: Dictionary with transcription data
+    :param transcription: String with Transcribed Audio
     """
     cursor.execute("""
     INSERT INTO transcriptions (
@@ -135,45 +136,28 @@ def insert_transcription(cursor, filename: str, file_info: dict, transcription: 
         file_info['time'],
         file_info['speaker'],
         file_info['channel'],
-        transcription['text']
+        transcription
     ))
 
 def transcribe_audio(model, filepath: str) -> dict:
     """
     Function to transcribe a single Audio File
-
-    :param model: Initialized faster whisper model
-    :param filepath: Path to Audio File
-    :return: dict with the following keys:
-            - language (str): Detected language code (e.g. 'de', 'en')
-            - language_probability (float): Confidence of language detection
-            - text (str): Full transcribed text
-    """ 
-    result = {
-        "language": None,
-        "language_probability": None,
-        "text": ""
-    }
+    """
+    combined = ""
 
     try:
-        # Transcribe File
-        segments, info = model.transcribe(filepath, beam_size=5)
+        audio = whisperx.load_audio(filepath)
+        result = model.transcribe(audio, batch_size=BATCH_SIZE)
 
-        # Save language detection info
-        result["language"] = info.language
-        result["language_probability"] = info.language_probability
-
-        # Combine all Segments into one
-        full_text = []
-        for segment in segments:
-            full_text.append(segment.text.strip())
-
-        result["text"] = " ".join(full_text)
+        model_a, metadata = whisperx.load_align_model(language_code=result["language"], device=device)
+        aligned = whisperx.align(result["segments"], model_a, metadata, audio, device, return_char_alignments=False)
+        combined = " ".join(segment["text"] for segment in aligned["segments"])
 
     except Exception as e:
         print(f"Error at {filepath}: {e}")
 
-    return result
+    return combined
+
 
 def parse_filename(filename: str) -> dict:
     """
@@ -266,6 +250,8 @@ if __name__ == "__main__":
     # Input Output Folder Paths
     INPUT_FOLDER = "input"
     OUTPUT_FOLDER = "output"
+    DB_FOLDER = "db/"
+    MODEL_FOLDER = "models"
 
     # Load environment variables
 
@@ -273,6 +259,8 @@ if __name__ == "__main__":
     load_dotenv()
 
     # Input / Output / DB Paths
+
+    BATCH_SIZE = os.getenv("BATCH_SIZE", "16")
 
 
     DB_FILE = os.getenv("DB_FILE", "transcriptions.db")
@@ -284,6 +272,12 @@ if __name__ == "__main__":
 
     # Huggingface Token
     HF_TOKEN =  os.getenv("HF_TOKEN", None)
+
+
+    Path(INPUT_FOLDER).mkdir(parents=True, exist_ok=True)
+    Path(OUTPUT_FOLDER).mkdir(parents=True, exist_ok=True)
+    Path(DB_FOLDER).mkdir(parents=True, exist_ok=True)
+    Path(MODEL_FOLDER).mkdir(parents=True, exist_ok=True)
 
     print("Environment variables loaded:")
     print(f"INPUT_FOLDER={INPUT_FOLDER}")
@@ -298,7 +292,8 @@ if __name__ == "__main__":
     # Create SQLite Table if it doesn't exist
 
     print("Building Database:.....")
-    conn = sqlite3.connect("/app/db/" + DB_FILE)
+    print(DB_FOLDER + DB_FILE)
+    conn = sqlite3.connect(DB_FOLDER + DB_FILE)
     cursor = conn.cursor()
 
     cursor.execute("""
@@ -318,11 +313,23 @@ if __name__ == "__main__":
 
     # Load Model
     print("Loading Whisper:")
-    model = WhisperModel(MODEL_SIZE, device=DEVICE, compute_type=COMPUTE_TYPE)
+    #model = WhisperModel(MODEL_SIZE, device=DEVICE, compute_type=COMPUTE_TYPE)
+
+
+    device = "cuda"
+    batch_size = 16 # reduce if low on GPU mem
+    compute_type = "float16" # change to "int8" if low on GPU mem (may reduce accuracy)
+
+    # 1. Transcribe with original whisper (batched)
+    model = whisperx.load_model("large-v2", device, compute_type=compute_type, download_root=MODEL_FOLDER)
+
+
+
+
 
     # Main Loop thingy
     start_watchdog_with_existing(
-        input_folder="input",
-        output_folder="output",
+        input_folder=INPUT_FOLDER,
+        output_folder=OUTPUT_FOLDER,
         model=model
     )
