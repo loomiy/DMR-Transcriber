@@ -17,22 +17,52 @@ example:
 |:--:|:--:|:--:|:--:|:--:|:--:|:--:|
 |1|20260317_183128CATS_DMR_Digital_01__02__TO_1_FROM_67420.mp3|2026-03-17|18\:38\:28|67420|CATS DMR Digital 01 02|Hello, this is a Test!|
 
-# Installing
+# Usage
 First of all you need Docker and Docker compose.
 
+I don't provide build images, because WhisperX images are a bit to large. 
+
+Build command is in the compose.yaml
+
+
+## CPU
 ```bash
 git clone https://github.com/loomiy/DMR-Transcriber
 cd DMR-Transcriber
-mv example-cpu.env .env
-docker compose up -d
+
+# build and run
+docker compose -f compose.cpu.yaml up --build
+
+# just build
+docker compose -f compose.cpu.yaml build
+
+# run in background
+docker compose -f compose.cpu.yaml up -d
 ```
 
 It should have created folders for input, output, db and cache (For Whisper Model Downloads).
 
-Now you can stop the whole thing with `docker compose down` and see the logs with `docker compose logs`.
+## CUDA
+You need an Nvidia GPU and need to install the [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html)
 
-# Building
-`docker build . -t dmr-transcriber:latest`
+After it is installed you can run
+
+``` bash
+git clone https://github.com/loomiy/DMR-Transcriber
+cd DMR-Transcriber
+
+sudo nvidia-ctk runtime configure --runtime=docker
+sudo systemctl restart docker
+
+# build and run
+docker compose -f compose.cuda.yaml up --build
+
+# just build
+docker compose -f compose.cuda.yaml build
+
+# run in background
+docker compose -f compose.cuda.yaml up -d
+```
 
 # Developement
 

@@ -1,0 +1,15 @@
+services:
+  dmr:
+    build:
+      context: .
+      dockerfile: Dockerfile.cuda
+    image: dmr-transcriber
+    container_name: dmr-transcriber
+    env_file: cuda.env
+    restart: unless-stopped
+    volumes:
+      - ./input:/app/input
+      - ./output:/app/output
+      - ./db:/app/db
+      - ./models:/app/models
+    runtime: nvidia

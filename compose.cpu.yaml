@@ -4,7 +4,7 @@ services:
       context: .
       dockerfile: Dockerfile.cpu
     image: whisperx-app
-    env_file: .env
+    env_file: cpu.env
     volumes:
       - ./input:/app/input
       - ./output:/app/output

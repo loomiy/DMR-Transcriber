@@ -1,4 +1,4 @@
-# Große Laufzeit-Ordner, gehören nicht in den Build
+# ignore runtime folders
 models/
 input/
 output/
@@ -6,10 +6,10 @@ db/
 audio/
 *.db
 
-# Secrets & lokales Zeug
+# Secrets and settigs
 .env
 
-# Python-Müll
+# Python
 __pycache__/
 *.pyc
 .venv/
