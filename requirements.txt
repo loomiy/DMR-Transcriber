@@ -1,3 +1,3 @@
-whisperx
-watchdog 
+faster-whisper
 python-dotenv
+watchdog

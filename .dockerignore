@@ -1,0 +1,18 @@
+# Große Laufzeit-Ordner, gehören nicht in den Build
+models/
+input/
+output/
+db/
+audio/
+*.db
+
+# Secrets & lokales Zeug
+.env
+
+# Python-Müll
+__pycache__/
+*.pyc
+.venv/
+
+# Git
+.git/

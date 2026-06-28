@@ -1,6 +1,9 @@
 services:
   dmr:
-    image: ghcr.io/loomiy/dmr-transcriber:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.cpu
+    image: whisperx-app
     env_file: .env
     volumes:
       - ./input:/app/input
